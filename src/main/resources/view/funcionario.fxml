@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+
+<AnchorPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="br.unicentro.lojaveiculos.controller.FuncionarioController"
+            prefHeight="600.0"
+            prefWidth="900.0">
+
+    <children>
+
+        <Label
+                layoutX="350"
+                layoutY="25"
+                text="FUNCIONÁRIOS"
+                style="-fx-font-size: 24px; -fx-font-weight: bold;" />
+
+        <Label layoutX="40" layoutY="90" text="Nome:" />
+        <TextField
+                fx:id="txtNome"
+                layoutX="120"
+                layoutY="85"
+                prefWidth="250" />
+
+        <Label layoutX="400" layoutY="90" text="CPF:" />
+        <TextField
+                fx:id="txtCpf"
+                layoutX="450"
+                layoutY="85"
+                prefWidth="180" />
+
+        <Label layoutX="40" layoutY="140" text="Cargo:" />
+        <TextField
+                fx:id="txtCargo"
+                layoutX="120"
+                layoutY="135"
+                prefWidth="180" />
+
+        <Label layoutX="330" layoutY="140" text="Turno:" />
+        <TextField
+                fx:id="txtTurno"
+                layoutX="390"
+                layoutY="135"
+                prefWidth="150" />
+
+        <Label layoutX="570" layoutY="140" text="Salário:" />
+        <TextField
+                fx:id="txtSalario"
+                layoutX="630"
+                layoutY="135"
+                prefWidth="150" />
+
+
+        <Button
+                layoutX="120"
+                layoutY="195"
+                prefWidth="120"
+                text="Cadastrar"
+                onAction="#cadastrar" />
+
+        <Button
+                layoutX="260"
+                layoutY="195"
+                prefWidth="120"
+                text="Alterar"
+                onAction="#alterar" />
+
+        <Button
+                layoutX="400"
+                layoutY="195"
+                prefWidth="120"
+                text="Excluir"
+                onAction="#excluir" />
+
+        <Button
+                layoutX="540"
+                layoutY="195"
+                prefWidth="120"
+                text="Limpar"
+                onAction="#limpar" />
+
+        <Button
+                layoutX="680"
+                layoutY="195"
+                prefWidth="120"
+                text="Voltar"
+                onAction="#voltar" />
+
+
+        <TableView
+                fx:id="tabelaFuncionarios"
+                layoutX="40"
+                layoutY="260"
+                prefWidth="820"
+                prefHeight="290">
+
+            <columns>
+
+                <TableColumn
+                        fx:id="colId"
+                        prefWidth="60"
+                        text="ID" />
+
+                <TableColumn
+                        fx:id="colNome"
+                        prefWidth="220"
+                        text="Nome" />
+
+                <TableColumn
+                        fx:id="colCpf"
+                        prefWidth="140"
+                        text="CPF" />
+
+                <TableColumn
+                        fx:id="colCargo"
+                        prefWidth="140"
+                        text="Cargo" />
+
+                <TableColumn
+                        fx:id="colTurno"
+                        prefWidth="110"
+                        text="Turno" />
+
+                <TableColumn
+                        fx:id="colSalario"
+                        prefWidth="140"
+                        text="Salário" />
+
+            </columns>
+
+        </TableView>
+
+    </children>
+
+</AnchorPane>
