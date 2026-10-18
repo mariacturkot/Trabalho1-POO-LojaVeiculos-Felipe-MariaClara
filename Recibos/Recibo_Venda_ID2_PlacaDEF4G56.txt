@@ -1,0 +1,25 @@
+=========================================
+        RECIBO DE VENDA DE VEÍCULO       
+=========================================
+
+DADOS DA TRANSAÇÃO:
+ID da Venda: 2
+Data da Venda: 03/02/2026
+Data de Pagamento: 05/02/2026
+Valor Total: R$ 81000,00
+
+DADOS DO VEÍCULO:
+Marca: Honda
+Modelo: Civic EXL
+Ano: 2020
+Placa: DEF4G56
+Cor: Preto
+Chassi/Especificações: Automatico, 2.0, bancos em couro
+
+DADOS DO ATENDIMENTO:
+Vendedor(a): Fernanda Oliveira
+Cargo: Vendedora
+
+=========================================
+        OBRIGADO PELA PREFERÊNCIA!       
+=========================================

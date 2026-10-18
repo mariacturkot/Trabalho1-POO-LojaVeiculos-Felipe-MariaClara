@@ -113,4 +113,36 @@ public class VeiculoDAO implements IVeiculo{
             stmt.executeUpdate();
         }
     }
+    // --- NOVO MÉTODO PARA O DIFERENCIAL DE BUSCA ---
+    public List<Veiculo> buscarPorMarcaOuPlaca(String termoBusca) throws SQLException {
+        List<Veiculo> veiculos = new ArrayList<>();
+
+        // O ILIKE é específico do PostgreSQL e faz a busca ignorando maiúsculas e minúsculas
+        String sql = "SELECT * FROM Veiculo WHERE marca ILIKE ? OR placa ILIKE ? ORDER BY idVeiculo";
+
+        try(Connection conexao = Conexao.getConexao(); PreparedStatement stmt = conexao.prepareStatement(sql)){
+            // Os % ao redor do termo de busca indicam que pode haver texto antes ou depois
+            stmt.setString(1, "%" + termoBusca + "%");
+            stmt.setString(2, "%" + termoBusca + "%");
+
+            try(ResultSet rs = stmt.executeQuery()){
+                while(rs.next()){
+                    Veiculo veiculo = new Veiculo();
+                    veiculo.setIdVeiculo(rs.getInt("idVeiculo"));
+                    veiculo.setMarca(rs.getString("marca"));
+                    veiculo.setPlaca(rs.getString("placa"));
+                    veiculo.setCor(rs.getString("cor"));
+                    veiculo.setValor(rs.getDouble("valor"));
+                    veiculo.setStatus(rs.getString("status"));
+                    veiculo.setTipo(rs.getString("tipo"));
+                    veiculo.setModelo(rs.getString("modelo"));
+                    veiculo.setAno(rs.getInt("ano"));
+                    veiculo.setEspecificacoes(rs.getString("especificacoes"));
+
+                    veiculos.add(veiculo);
+                }
+            }
+        }
+        return veiculos;
+    }
 }

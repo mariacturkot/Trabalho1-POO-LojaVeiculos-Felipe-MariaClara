@@ -131,6 +131,13 @@
                 text="Voltar"
                 onAction="#voltar" />
 
+        <!-- BOTÃO DO DIFERENCIAL 2 -->
+        <Button layoutX="130"
+                layoutY="245"
+                prefWidth="730"
+                text="Gerar Recibo de Venda"
+                onAction="#gerarRecibo"
+                style="-fx-font-weight: bold; -fx-text-fill: green;" />
 
         <!-- TABELA -->
 
