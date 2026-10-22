@@ -20,6 +20,10 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDate;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.time.format.DateTimeFormatter;
+
 public class VendaController {
 
     @FXML
@@ -335,6 +339,76 @@ public class VendaController {
         try{
             GerenciadorTelas.trocarTela("/view/menu.fxml");
         } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    // --- NOVO MÉTODO PARA O DIFERENCIAL 2 (GERAÇÃO DE RECIBO) ---
+    @FXML
+    private void gerarRecibo() {
+        Venda venda = tabelaVendas.getSelectionModel().getSelectedItem();
+
+        if (venda == null) {
+            new Alert(Alert.AlertType.WARNING, "Selecione uma venda na tabela para gerar o recibo!", ButtonType.OK).showAndWait();
+            return;
+        }
+
+        // Recuperar as informações completas a partir dos IDs
+        Funcionario funcionario = buscarFuncionarioPorId(venda.getIdFuncionario());
+        Veiculo veiculo = buscarVeiculoPorId(venda.getIdVeiculo());
+
+        if (funcionario == null || veiculo == null) {
+            new Alert(Alert.AlertType.ERROR, "Erro ao carregar dados complementares para o recibo.", ButtonType.OK).showAndWait();
+            return;
+        }
+
+        DateTimeFormatter formatadorData = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String dataVendaFormatada = venda.getDataVenda().format(formatadorData);
+        String dataPagamentoFormatada = venda.getDataPagamento() != null ? venda.getDataPagamento().format(formatadorData) : "Pendente";
+
+        String conteudoRecibo = "=========================================\n" +
+                "        RECIBO DE VENDA DE VEÍCULO       \n" +
+                "=========================================\n\n" +
+                "DADOS DA TRANSAÇÃO:\n" +
+                "ID da Venda: " + venda.getIdVenda() + "\n" +
+                "Data da Venda: " + dataVendaFormatada + "\n" +
+                "Data de Pagamento: " + dataPagamentoFormatada + "\n" +
+                "Valor Total: R$ " + String.format("%.2f", venda.getValorTotal()) + "\n\n" +
+                "DADOS DO VEÍCULO:\n" +
+                "Marca: " + veiculo.getMarca() + "\n" +
+                "Modelo: " + veiculo.getModelo() + "\n" +
+                "Ano: " + veiculo.getAno() + "\n" +
+                "Placa: " + veiculo.getPlaca() + "\n" +
+                "Cor: " + veiculo.getCor() + "\n" +
+                "Chassi/Especificações: " + veiculo.getEspecificacoes() + "\n\n" +
+                "DADOS DO ATENDIMENTO:\n" +
+                "Vendedor(a): " + funcionario.getNome() + "\n" +
+                "Cargo: " + funcionario.getCargo() + "\n\n" +
+                "=========================================\n" +
+                "        OBRIGADO PELA PREFERÊNCIA!       \n" +
+                "=========================================";
+
+        try {
+            // Cria a pasta "Recibos" na raiz do projeto, se ela não existir
+            File diretorio = new File("Recibos");
+            if (!diretorio.exists()) {
+                diretorio.mkdir();
+            }
+
+            // Gera o nome do ficheiro (ex: Recibo_Venda_ID1_PlacaABC1234.txt)
+            String nomeArquivo = "Recibos/Recibo_Venda_ID" + venda.getIdVenda() + "_Placa" + veiculo.getPlaca() + ".txt";
+            File arquivo = new File(nomeArquivo);
+
+            FileWriter escritor = new FileWriter(arquivo);
+            escritor.write(conteudoRecibo);
+            escritor.close();
+
+            Alert sucesso = new Alert(Alert.AlertType.INFORMATION, "Recibo gerado com sucesso!\nSalvo em: " + arquivo.getAbsolutePath(), ButtonType.OK);
+            sucesso.setHeaderText("Comprovante Emitido");
+            sucesso.showAndWait();
+
+        } catch (IOException e) {
+            new Alert(Alert.AlertType.ERROR, "Erro ao gerar o arquivo de recibo:\n" + e.getMessage(), ButtonType.OK).showAndWait();
             e.printStackTrace();
         }
     }

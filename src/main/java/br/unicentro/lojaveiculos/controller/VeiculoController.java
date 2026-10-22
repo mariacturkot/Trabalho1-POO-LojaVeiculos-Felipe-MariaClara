@@ -76,6 +76,9 @@ public class VeiculoController {
     @FXML
     private TableColumn<Veiculo, String> colEspecificacoes;
 
+    @FXML
+    private TextField txtBusca;
+
     private VeiculoDAO veiculoDAO = new VeiculoDAO();
 
     @FXML
@@ -108,6 +111,22 @@ public class VeiculoController {
                 txtEspecificacoes.setText(selecionado.getEspecificacoes());
             }
         });
+
+        // --- INÍCIO DO LISTENER DO DIFERENCIAL 1 ---
+        txtBusca.textProperty().addListener((observable, antigo, novoValor) -> {
+            try {
+                if (novoValor == null || novoValor.trim().isEmpty()) {
+                    carregarVeiculos(); // Se a busca estiver vazia, carrega todos
+                } else {
+                    // Atualiza a tabela chamando o método novo do DAO
+                    tabelaVeiculos.setItems(FXCollections.observableArrayList(veiculoDAO.buscarPorMarcaOuPlaca(novoValor)));
+                }
+            } catch (SQLException e) {
+                new Alert(Alert.AlertType.ERROR, "Erro ao buscar veículos!!", ButtonType.OK).showAndWait();
+                e.printStackTrace();
+            }
+        });
+
     }
 
     @FXML
