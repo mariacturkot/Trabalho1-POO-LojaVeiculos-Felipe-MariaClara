@@ -113,15 +113,15 @@ public class VeiculoDAO implements IVeiculo{
             stmt.executeUpdate();
         }
     }
-    // --- NOVO MÉTODO PARA O DIFERENCIAL DE BUSCA ---
+
     public List<Veiculo> buscarPorMarcaOuPlaca(String termoBusca) throws SQLException {
         List<Veiculo> veiculos = new ArrayList<>();
 
-        // O ILIKE é específico do PostgreSQL e faz a busca ignorando maiúsculas e minúsculas
+
         String sql = "SELECT * FROM Veiculo WHERE marca ILIKE ? OR placa ILIKE ? ORDER BY idVeiculo";
 
         try(Connection conexao = Conexao.getConexao(); PreparedStatement stmt = conexao.prepareStatement(sql)){
-            // Os % ao redor do termo de busca indicam que pode haver texto antes ou depois
+
             stmt.setString(1, "%" + termoBusca + "%");
             stmt.setString(2, "%" + termoBusca + "%");
 

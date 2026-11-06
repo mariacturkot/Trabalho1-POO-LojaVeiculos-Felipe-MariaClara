@@ -112,13 +112,11 @@ public class VeiculoController {
             }
         });
 
-        // --- INÍCIO DO LISTENER DO DIFERENCIAL 1 ---
         txtBusca.textProperty().addListener((observable, antigo, novoValor) -> {
             try {
                 if (novoValor == null || novoValor.trim().isEmpty()) {
-                    carregarVeiculos(); // Se a busca estiver vazia, carrega todos
+                    carregarVeiculos();
                 } else {
-                    // Atualiza a tabela chamando o método novo do DAO
                     tabelaVeiculos.setItems(FXCollections.observableArrayList(veiculoDAO.buscarPorMarcaOuPlaca(novoValor)));
                 }
             } catch (SQLException e) {

@@ -343,7 +343,6 @@ public class VendaController {
         }
     }
 
-    // --- NOVO MÉTODO PARA O DIFERENCIAL 2 (GERAÇÃO DE RECIBO) ---
     @FXML
     private void gerarRecibo() {
         Venda venda = tabelaVendas.getSelectionModel().getSelectedItem();
@@ -353,7 +352,6 @@ public class VendaController {
             return;
         }
 
-        // Recuperar as informações completas a partir dos IDs
         Funcionario funcionario = buscarFuncionarioPorId(venda.getIdFuncionario());
         Veiculo veiculo = buscarVeiculoPorId(venda.getIdVeiculo());
 
@@ -389,13 +387,11 @@ public class VendaController {
                 "=========================================";
 
         try {
-            // Cria a pasta "Recibos" na raiz do projeto, se ela não existir
             File diretorio = new File("Recibos");
             if (!diretorio.exists()) {
                 diretorio.mkdir();
             }
 
-            // Gera o nome do ficheiro (ex: Recibo_Venda_ID1_PlacaABC1234.txt)
             String nomeArquivo = "Recibos/Recibo_Venda_ID" + venda.getIdVenda() + "_Placa" + veiculo.getPlaca() + ".txt";
             File arquivo = new File(nomeArquivo);
 
