@@ -103,6 +103,45 @@ public class VeiculoDAO implements IVeiculo{
         }
     }
 
+    public void marcarComoVendido(int idVeiculo, Connection conexao) throws SQLException{
+
+        String sql= "UPDATE Veiculo SET status = ? " +
+                    "WHERE idVeiculo = ? AND status = ?";
+
+        try(PreparedStatement stmt = conexao.prepareStatement(sql)){
+
+            stmt.setString(1, "VENDIDO");
+            stmt.setInt(2, idVeiculo);
+            stmt.setString(3, "DISPONIVEL");
+
+            int linhasAlteradas = stmt.executeUpdate();
+
+            if(linhasAlteradas == 0){
+                throw new SQLException("Veiculo não encontrado ou indisponível para venda!");
+            }
+        }
+    }
+
+    public void marcarComoDisponivel(int idVeiculo, Connection conexao) throws SQLException{
+
+        String sql= "UPDATE Veiculo SET status = ? " +
+                    "WHERE idVeiculo = ? AND status = ?";
+
+        try(PreparedStatement stmt = conexao.prepareStatement(sql)){
+
+            stmt.setString(1, "DISPONIVEL");
+            stmt.setInt(2, idVeiculo);
+            stmt.setString(3, "VENDIDO");
+
+            int linhasAlteradas = stmt.executeUpdate();
+            if(linhasAlteradas == 0){
+                throw new SQLException("Veículo não encontrado ou não está vendido!");
+            }
+
+        }
+
+    }
+
     @Override
     public void excluir(int idVeiculo) throws SQLException{
 

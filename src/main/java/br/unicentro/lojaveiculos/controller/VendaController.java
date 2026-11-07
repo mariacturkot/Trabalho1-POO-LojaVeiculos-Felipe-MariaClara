@@ -7,6 +7,7 @@ import br.unicentro.lojaveiculos.main.GerenciadorTelas;
 import br.unicentro.lojaveiculos.model.Funcionario;
 import br.unicentro.lojaveiculos.model.Veiculo;
 import br.unicentro.lojaveiculos.model.Venda;
+import br.unicentro.lojaveiculos.service.VendaService;
 
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -65,6 +66,7 @@ public class VendaController {
     private VendaDAO vendaDAO = new VendaDAO();
     private FuncionarioDAO funcionarioDAO = new FuncionarioDAO();
     private VeiculoDAO veiculoDAO = new VeiculoDAO();
+    private VendaService vendaService = new VendaService();
 
     @FXML
     public void initialize(){
@@ -128,36 +130,17 @@ public class VendaController {
             return;
         }
 
-        if(!veiculo.getStatus().equals("DISPONIVEL")){
-            new Alert(Alert.AlertType.WARNING, "O veículo selecionado não está para venda!!", ButtonType.OK).showAndWait();
-            return;
-        }
-
-        if(dataPagamento != null && dataPagamento.isBefore(dataVenda)){
-            new Alert(Alert.AlertType.WARNING, "A data de pagamento não pode ser anterior à data da venda!!", ButtonType.OK).showAndWait();
-            return;
-        }
-
         try{
             double valorTotal = Double.parseDouble(valorTexto.replace(",", "."));
 
-            if(valorTotal <= 0){
-                new Alert(Alert.AlertType.WARNING, "O valor da venda deve ser maior que zero!!", ButtonType.OK).showAndWait();
-                return;
-            }
-
             Venda venda = new Venda();
-
             venda.setIdFuncionario(funcionario.getIdFuncionario());
             venda.setIdVeiculo(veiculo.getIdVeiculo());
             venda.setDataVenda(dataVenda);
             venda.setValorTotal(valorTotal);
             venda.setDataPagamento(dataPagamento);
 
-            vendaDAO.inserir(venda);
-
-            veiculo.setStatus("VENDIDO");
-            veiculoDAO.alterar(veiculo);
+            vendaService.cadastrar(venda, veiculo);
 
             new Alert(Alert.AlertType.INFORMATION, "Venda cadastrada com sucesso!!", ButtonType.OK).showAndWait();
 
@@ -167,6 +150,8 @@ public class VendaController {
 
         } catch (NumberFormatException e){
             new Alert(Alert.AlertType.WARNING, "Informe um valor válido!!", ButtonType.OK).showAndWait();
+        } catch (IllegalArgumentException e){
+            new Alert(Alert.AlertType.WARNING, e.getMessage(), ButtonType.OK).showAndWait();
         } catch (SQLException e){
             new Alert(Alert.AlertType.ERROR, "Erro ao cadastrar a venda!\n\n" + e.getMessage(), ButtonType.OK).showAndWait();
             e.printStackTrace();
@@ -174,12 +159,12 @@ public class VendaController {
     }
 
     @FXML
-    private void alterar(){
+    public void alterar(){
 
-        Venda venda = tabelaVendas.getSelectionModel().getSelectedItem();
+        Venda vendaSelecionada = tabelaVendas.getSelectionModel().getSelectedItem();
 
-        if(venda ==  null){
-            new Alert(Alert.AlertType.WARNING, "Selecione uma venda na tabela!!", ButtonType.OK).showAndWait();
+        if(vendaSelecionada == null){
+            new Alert(Alert.AlertType.WARNING, "Selecione uma venda na tabela!", ButtonType.OK).showAndWait();
             return;
         }
 
@@ -189,63 +174,40 @@ public class VendaController {
         LocalDate dataPagamento = dpDataPagamento.getValue();
         String valorTexto = txtValorTotal.getText().trim();
 
-        if(funcionario == null || veiculo == null || dataVenda == null || valorTexto.isEmpty()){
-            new Alert(Alert.AlertType.WARNING, "Preencha todos os campos obrigatórios!!", ButtonType.OK).showAndWait();
+        if (funcionario == null || veiculo == null || dataVenda == null || valorTexto.isEmpty()){
+            new Alert(Alert.AlertType.WARNING, "Preencha todos os campos obrigatórios!", ButtonType.OK).showAndWait();
             return;
         }
 
-        if(dataPagamento != null && dataPagamento.isBefore(dataVenda)){
-            new Alert(Alert.AlertType.WARNING, "A data de pagamento não pode ser anterior à data da venda!!", ButtonType.OK).showAndWait();
-            return;
-        }
+        try {
 
-        int idVeiculoAntigo = venda.getIdVeiculo();
-
-        if(veiculo.getIdVeiculo() != idVeiculoAntigo && !veiculo.getStatus().equals("DISPONIVEL")){
-            new Alert(Alert.AlertType.WARNING, "O novo veículo selecionado não está disponível!!", ButtonType.OK).showAndWait();
-            return;
-        }
-
-        try{
             double valorTotal = Double.parseDouble(valorTexto.replace(",", "."));
 
-            if(valorTotal <= 0){
-                new Alert(Alert.AlertType.WARNING, "O valor da venda deve ser maior que zero!!", ButtonType.OK).showAndWait();
-                return;
-            }
+         Venda venda = new Venda();
+         venda.setIdVenda(vendaSelecionada.getIdVenda());
+         venda.setIdFuncionario(funcionario.getIdFuncionario());
+         venda.setIdVeiculo(veiculo.getIdVeiculo());
+         venda.setDataVenda(dataVenda);
+         venda.setValorTotal(valorTotal);
+         venda.setDataPagamento(dataPagamento);
 
-            venda.setIdFuncionario(funcionario.getIdFuncionario());
-            venda.setIdVeiculo(veiculo.getIdVeiculo());
-            venda.setDataVenda(dataVenda);
-            venda.setValorTotal(valorTotal);
-            venda.setDataPagamento(dataPagamento);
+         vendaService.alterar(venda, veiculo);
 
-            vendaDAO.alterar(venda);
+         new Alert(Alert.AlertType.INFORMATION, "Venda alterada com sucesso!", ButtonType.OK).showAndWait();
 
-            if(idVeiculoAntigo != veiculo.getIdVeiculo()){
-                Veiculo veiculoAntigo = buscarVeiculoPorId(idVeiculoAntigo);
-
-                if(veiculoAntigo != null){
-                    veiculoAntigo.setStatus("DISPONIVEL");
-                    veiculoDAO.alterar(veiculoAntigo);
-                }
-
-                veiculo.setStatus("VENDIDO");
-                veiculoDAO.alterar(veiculo);
-            }
-
-            new Alert(Alert.AlertType.INFORMATION, "Venda alterada com sucesso!!", ButtonType.OK).showAndWait();
-
-            limparCampos();
-            carregarCombos();
-            carregarVendas();
+         limparCampos();
+         carregarCombos();
+         carregarVendas();
 
         } catch (NumberFormatException e){
-            new Alert(Alert.AlertType.WARNING, "Informe um valor válido!!", ButtonType.OK).showAndWait();
-        } catch (SQLException e){
-            new Alert(Alert.AlertType.ERROR, "Erro ao alterar venda!!", ButtonType.OK).showAndWait();
+            new Alert(Alert.AlertType.WARNING, "Informe um valor válido!", ButtonType.OK).showAndWait();
+        } catch (IllegalArgumentException e){
+            new Alert(Alert.AlertType.WARNING, e.getMessage(),ButtonType.OK).showAndWait();
+        }catch (SQLException e){
+            new Alert(Alert.AlertType.ERROR, "Erro ao alterar a venda!\n\n" + e.getMessage(),ButtonType.OK).showAndWait();
             e.printStackTrace();
         }
+
     }
 
     @FXML
@@ -262,13 +224,7 @@ public class VendaController {
 
         if(confirmacao.getResult() == ButtonType.YES){
             try{
-                Veiculo veiculo = buscarVeiculoPorId(venda.getIdVeiculo());
-                vendaDAO.excluir(venda.getIdVenda());
-
-                if(veiculo != null){
-                    veiculo.setStatus("DISPONIVEL");
-                    veiculoDAO.alterar(veiculo);
-                }
+                vendaService.excluir(venda.getIdVenda());
 
                 new Alert(Alert.AlertType.INFORMATION, "Venda excluída com sucesso!!", ButtonType.NO).showAndWait();
 

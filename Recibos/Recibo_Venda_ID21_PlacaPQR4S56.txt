@@ -1,0 +1,25 @@
+=========================================
+        RECIBO DE VENDA DE VEÍCULO       
+=========================================
+
+DADOS DA TRANSAÇÃO:
+ID da Venda: 21
+Data da Venda: 02/03/2026
+Data de Pagamento: 02/03/2026
+Valor Total: R$ 57000,00
+
+DADOS DO VEÍCULO:
+Marca: Ford
+Modelo: Ranger XLS
+Ano: 2019
+Placa: PQR4S56
+Cor: Branco
+Chassi/Especificações: Manual, diesel, cabine dupla
+
+DADOS DO ATENDIMENTO:
+Vendedor(a): Carlos Henrique Silva
+Cargo: Vendedor
+
+=========================================
+        OBRIGADO PELA PREFERÊNCIA!       
+=========================================
