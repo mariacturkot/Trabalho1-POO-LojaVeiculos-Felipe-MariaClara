@@ -1,12 +1,13 @@
 package br.unicentro.lojaveiculos.controller;
 
-import br.unicentro.lojaveiculos.dao.FuncionarioDAO;
-import br.unicentro.lojaveiculos.dao.VeiculoDAO;
-import br.unicentro.lojaveiculos.dao.VendaDAO;
 import br.unicentro.lojaveiculos.main.GerenciadorTelas;
 import br.unicentro.lojaveiculos.model.Funcionario;
 import br.unicentro.lojaveiculos.model.Veiculo;
 import br.unicentro.lojaveiculos.model.Venda;
+import br.unicentro.lojaveiculos.observer.AtualizacaoTelaVendaObserver;
+import br.unicentro.lojaveiculos.observer.AuditoriaVendaObserver;
+import br.unicentro.lojaveiculos.service.FuncionarioService;
+import br.unicentro.lojaveiculos.service.VeiculoService;
 import br.unicentro.lojaveiculos.service.VendaService;
 
 import javafx.beans.property.SimpleDoubleProperty;
@@ -17,12 +18,11 @@ import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDate;
-
-import java.io.File;
-import java.io.FileWriter;
 import java.time.format.DateTimeFormatter;
 
 public class VendaController {
@@ -63,13 +63,21 @@ public class VendaController {
     @FXML
     private TableColumn<Venda, String> colDataPagamento;
 
-    private VendaDAO vendaDAO = new VendaDAO();
-    private FuncionarioDAO funcionarioDAO = new FuncionarioDAO();
-    private VeiculoDAO veiculoDAO = new VeiculoDAO();
-    private VendaService vendaService = new VendaService();
+    // Padrão Service Layer: nenhuma referência direta a classes DAO no Controller
+    private final VendaService vendaService = new VendaService();
+    private final FuncionarioService funcionarioService = new FuncionarioService();
+    private final VeiculoService veiculoService = new VeiculoService();
 
     @FXML
-    public void initialize(){
+    public void initialize() {
+
+        // Padrão Observer: registro dos observadores concretos no Subject (VendaService)
+        vendaService.adicionarObserver(new AuditoriaVendaObserver());
+        vendaService.adicionarObserver(new AtualizacaoTelaVendaObserver(() -> {
+            limparCampos();
+            carregarCombos();
+            carregarVendas();
+        }));
 
         carregarCombos();
 
@@ -77,7 +85,7 @@ public class VendaController {
 
         colFuncionario.setCellValueFactory(dado -> {
             Funcionario funcionario = buscarFuncionarioPorId(dado.getValue().getIdFuncionario());
-            if(funcionario != null){
+            if (funcionario != null) {
                 return new SimpleStringProperty(funcionario.getNome());
             }
             return new SimpleStringProperty(String.valueOf(dado.getValue().getIdFuncionario()));
@@ -85,7 +93,7 @@ public class VendaController {
 
         colVeiculo.setCellValueFactory(dado -> {
             Veiculo veiculo = buscarVeiculoPorId(dado.getValue().getIdVeiculo());
-            if(veiculo != null){
+            if (veiculo != null) {
                 return new SimpleStringProperty(veiculo.getMarca() + " " + veiculo.getModelo() + " " + veiculo.getPlaca());
             }
             return new SimpleStringProperty(String.valueOf(dado.getValue().getIdVeiculo()));
@@ -95,7 +103,7 @@ public class VendaController {
         colValorTotal.setCellValueFactory(dado -> new SimpleDoubleProperty(dado.getValue().getValorTotal()).asObject());
 
         colDataPagamento.setCellValueFactory(dado -> {
-            if(dado.getValue().getDataPagamento() != null){
+            if (dado.getValue().getDataPagamento() != null) {
                 return new SimpleStringProperty(String.valueOf(dado.getValue().getDataPagamento()));
             } else {
                 return new SimpleStringProperty("-");
@@ -106,8 +114,7 @@ public class VendaController {
         dpDataVenda.setValue(LocalDate.now());
 
         tabelaVendas.getSelectionModel().selectedItemProperty().addListener((observable, antigo, selecionado) -> {
-
-            if(selecionado != null){
+            if (selecionado != null) {
                 cbFuncionario.setValue(buscarFuncionarioPorId(selecionado.getIdFuncionario()));
                 cbVeiculo.setValue(buscarVeiculoPorId(selecionado.getIdVeiculo()));
                 dpDataVenda.setValue(selecionado.getDataVenda());
@@ -118,19 +125,19 @@ public class VendaController {
     }
 
     @FXML
-    private void cadastrar(){
+    private void cadastrar() {
         Funcionario funcionario = cbFuncionario.getValue();
         Veiculo veiculo = cbVeiculo.getValue();
         LocalDate dataVenda = dpDataVenda.getValue();
         LocalDate dataPagamento = dpDataPagamento.getValue();
         String valorTexto = txtValorTotal.getText().trim();
 
-        if(funcionario == null || veiculo == null || dataVenda == null || valorTexto.isEmpty()){
+        if (funcionario == null || veiculo == null || dataVenda == null || valorTexto.isEmpty()) {
             new Alert(Alert.AlertType.WARNING, "Preencha todos os campos obrigatórios!!", ButtonType.OK).showAndWait();
             return;
         }
 
-        try{
+        try {
             double valorTotal = Double.parseDouble(valorTexto.replace(",", "."));
 
             Venda venda = new Venda();
@@ -140,30 +147,27 @@ public class VendaController {
             venda.setValorTotal(valorTotal);
             venda.setDataPagamento(dataPagamento);
 
+            // Ao confirmar no banco, o VendaService notifica automaticamente os Observers (Auditoria e Tela)
             vendaService.cadastrar(venda, veiculo);
 
             new Alert(Alert.AlertType.INFORMATION, "Venda cadastrada com sucesso!!", ButtonType.OK).showAndWait();
 
-            limparCampos();
-            carregarCombos();
-            carregarVendas();
-
-        } catch (NumberFormatException e){
+        } catch (NumberFormatException e) {
             new Alert(Alert.AlertType.WARNING, "Informe um valor válido!!", ButtonType.OK).showAndWait();
-        } catch (IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             new Alert(Alert.AlertType.WARNING, e.getMessage(), ButtonType.OK).showAndWait();
-        } catch (SQLException e){
+        } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, "Erro ao cadastrar a venda!\n\n" + e.getMessage(), ButtonType.OK).showAndWait();
             e.printStackTrace();
         }
     }
 
     @FXML
-    public void alterar(){
+    public void alterar() {
 
         Venda vendaSelecionada = tabelaVendas.getSelectionModel().getSelectedItem();
 
-        if(vendaSelecionada == null){
+        if (vendaSelecionada == null) {
             new Alert(Alert.AlertType.WARNING, "Selecione uma venda na tabela!", ButtonType.OK).showAndWait();
             return;
         }
@@ -174,65 +178,59 @@ public class VendaController {
         LocalDate dataPagamento = dpDataPagamento.getValue();
         String valorTexto = txtValorTotal.getText().trim();
 
-        if (funcionario == null || veiculo == null || dataVenda == null || valorTexto.isEmpty()){
+        if (funcionario == null || veiculo == null || dataVenda == null || valorTexto.isEmpty()) {
             new Alert(Alert.AlertType.WARNING, "Preencha todos os campos obrigatórios!", ButtonType.OK).showAndWait();
             return;
         }
 
         try {
-
             double valorTotal = Double.parseDouble(valorTexto.replace(",", "."));
 
-         Venda venda = new Venda();
-         venda.setIdVenda(vendaSelecionada.getIdVenda());
-         venda.setIdFuncionario(funcionario.getIdFuncionario());
-         venda.setIdVeiculo(veiculo.getIdVeiculo());
-         venda.setDataVenda(dataVenda);
-         venda.setValorTotal(valorTotal);
-         venda.setDataPagamento(dataPagamento);
+            Venda venda = new Venda();
+            venda.setIdVenda(vendaSelecionada.getIdVenda());
+            venda.setIdFuncionario(funcionario.getIdFuncionario());
+            venda.setIdVeiculo(veiculo.getIdVeiculo());
+            venda.setDataVenda(dataVenda);
+            venda.setValorTotal(valorTotal);
+            venda.setDataPagamento(dataPagamento);
 
-         vendaService.alterar(venda, veiculo);
+            // Ao confirmar no banco, o VendaService notifica automaticamente os Observers (Auditoria e Tela)
+            vendaService.alterar(venda, veiculo);
 
-         new Alert(Alert.AlertType.INFORMATION, "Venda alterada com sucesso!", ButtonType.OK).showAndWait();
+            new Alert(Alert.AlertType.INFORMATION, "Venda alterada com sucesso!", ButtonType.OK).showAndWait();
 
-         limparCampos();
-         carregarCombos();
-         carregarVendas();
-
-        } catch (NumberFormatException e){
+        } catch (NumberFormatException e) {
             new Alert(Alert.AlertType.WARNING, "Informe um valor válido!", ButtonType.OK).showAndWait();
-        } catch (IllegalArgumentException e){
-            new Alert(Alert.AlertType.WARNING, e.getMessage(),ButtonType.OK).showAndWait();
-        }catch (SQLException e){
-            new Alert(Alert.AlertType.ERROR, "Erro ao alterar a venda!\n\n" + e.getMessage(),ButtonType.OK).showAndWait();
+        } catch (IllegalArgumentException e) {
+            new Alert(Alert.AlertType.WARNING, e.getMessage(), ButtonType.OK).showAndWait();
+        } catch (SQLException e) {
+            new Alert(Alert.AlertType.ERROR, "Erro ao alterar a venda!\n\n" + e.getMessage(), ButtonType.OK).showAndWait();
             e.printStackTrace();
         }
-
     }
 
     @FXML
-    private void excluir(){
+    private void excluir() {
         Venda venda = tabelaVendas.getSelectionModel().getSelectedItem();
 
-        if(venda == null){
-            new Alert(Alert.AlertType.WARNING,"Selecione uma venda na tabela!!", ButtonType.OK).showAndWait();
+        if (venda == null) {
+            new Alert(Alert.AlertType.WARNING, "Selecione uma venda na tabela!!", ButtonType.OK).showAndWait();
             return;
         }
 
         Alert confirmacao = new Alert(Alert.AlertType.CONFIRMATION, "Deseja realmente excluir esta venda?", ButtonType.YES, ButtonType.NO);
         confirmacao.showAndWait();
 
-        if(confirmacao.getResult() == ButtonType.YES){
-            try{
+        if (confirmacao.getResult() == ButtonType.YES) {
+            try {
+                // Ao confirmar no banco, o VendaService notifica automaticamente os Observers (Auditoria e Tela)
                 vendaService.excluir(venda.getIdVenda());
 
                 new Alert(Alert.AlertType.INFORMATION, "Venda excluída com sucesso!!", ButtonType.NO).showAndWait();
 
-                limparCampos();
-                carregarCombos();
-                carregarVendas();
-
-            } catch (SQLException e){
+            } catch (IllegalArgumentException e) {
+                new Alert(Alert.AlertType.WARNING, e.getMessage(), ButtonType.OK).showAndWait();
+            } catch (SQLException e) {
                 new Alert(Alert.AlertType.ERROR, "Erro ao excluir a venda!!", ButtonType.NO).showAndWait();
                 e.printStackTrace();
             }
@@ -240,11 +238,11 @@ public class VendaController {
     }
 
     @FXML
-    private void limpar(){
+    private void limpar() {
         limparCampos();
     }
 
-    private void limparCampos(){
+    private void limparCampos() {
         cbFuncionario.setValue(null);
         cbVeiculo.setValue(null);
         dpDataVenda.setValue(LocalDate.now());
@@ -254,47 +252,48 @@ public class VendaController {
         tabelaVendas.getSelectionModel().clearSelection();
     }
 
-    private void carregarCombos(){
+    private void carregarCombos() {
         try {
-            cbFuncionario.setItems(FXCollections.observableArrayList(funcionarioDAO.consultar()));
-            cbVeiculo.setItems(FXCollections.observableArrayList(veiculoDAO.consultar()));
-        } catch (SQLException e){
+            cbFuncionario.setItems(FXCollections.observableArrayList(funcionarioService.consultar()));
+            cbVeiculo.setItems(FXCollections.observableArrayList(veiculoService.consultar()));
+        } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, "Erro ao carregar funcionários ou veículos!!", ButtonType.NO).showAndWait();
             e.printStackTrace();
         }
     }
 
-    private void carregarVendas(){
-        try{
-            tabelaVendas.setItems(FXCollections.observableArrayList(vendaDAO.consultar()));
-        } catch (SQLException e){
+    private void carregarVendas() {
+        try {
+            tabelaVendas.setItems(FXCollections.observableArrayList(vendaService.consultar()));
+        } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, "Erro ao consultar vendas!!", ButtonType.NO).showAndWait();
             e.printStackTrace();
         }
     }
 
-    private Funcionario buscarFuncionarioPorId(int idFuncionario){
-        for (Funcionario funcionario : cbFuncionario.getItems()){
-            if (funcionario.getIdFuncionario() == idFuncionario){
+    private Funcionario buscarFuncionarioPorId(int idFuncionario) {
+        for (Funcionario funcionario : cbFuncionario.getItems()) {
+            if (funcionario.getIdFuncionario() == idFuncionario) {
                 return funcionario;
             }
         }
         return null;
     }
 
-    private Veiculo buscarVeiculoPorId(int idVeiculo){
-        for (Veiculo veiculo : cbVeiculo.getItems()){
-            if (veiculo.getIdVeiculo() == idVeiculo){
+    private Veiculo buscarVeiculoPorId(int idVeiculo) {
+        for (Veiculo veiculo : cbVeiculo.getItems()) {
+            if (veiculo.getIdVeiculo() == idVeiculo) {
                 return veiculo;
             }
         }
         return null;
     }
 
-    @FXML private void voltar(){
-        try{
+    @FXML
+    private void voltar() {
+        try {
             GerenciadorTelas.trocarTela("/view/menu.fxml");
-        } catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }

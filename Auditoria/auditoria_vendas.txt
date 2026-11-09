@@ -1,0 +1,1 @@
+[08/11/2026 17:56:24] OPERAÇÃO: CADASTRO   | ID Venda: 11 | Valor: R$ 500000,00 | Veículo vendido: Honda HR-V EX (Placa: HGF1I23)

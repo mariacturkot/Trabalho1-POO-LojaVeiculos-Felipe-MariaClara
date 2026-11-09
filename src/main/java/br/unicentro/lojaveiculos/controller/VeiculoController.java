@@ -1,8 +1,13 @@
 package br.unicentro.lojaveiculos.controller;
 
-import br.unicentro.lojaveiculos.dao.VeiculoDAO;
 import br.unicentro.lojaveiculos.main.GerenciadorTelas;
 import br.unicentro.lojaveiculos.model.Veiculo;
+import br.unicentro.lojaveiculos.model.VeiculoBuilder;
+import br.unicentro.lojaveiculos.service.VeiculoService;
+import br.unicentro.lojaveiculos.strategy.OrdenacaoAnoMaisRecenteStrategy;
+import br.unicentro.lojaveiculos.strategy.OrdenacaoMaiorPrecoStrategy;
+import br.unicentro.lojaveiculos.strategy.OrdenacaoMenorPrecoStrategy;
+import br.unicentro.lojaveiculos.strategy.OrdenacaoPadraoStrategy;
 
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -79,11 +84,25 @@ public class VeiculoController {
     @FXML
     private TextField txtBusca;
 
-    private VeiculoDAO veiculoDAO = new VeiculoDAO();
+    @FXML
+    private ComboBox<String> cbOrdenacao;
+
+    // Padrão Service Layer: Controller conversa apenas com o Service
+    private final VeiculoService veiculoService = new VeiculoService();
 
     @FXML
-    public void initialize(){
+    public void initialize() {
         cbStatus.setItems(FXCollections.observableArrayList("DISPONIVEL", "RESERVADO", "VENDIDO"));
+
+        // Opções de ordenação do Padrão Strategy
+        cbOrdenacao.setItems(FXCollections.observableArrayList(
+                "Padrão (ID)",
+                "Menor Preço",
+                "Maior Preço",
+                "Ano Mais Recente"
+        ));
+        cbOrdenacao.setValue("Padrão (ID)");
+
         colId.setCellValueFactory(dado -> new SimpleIntegerProperty(dado.getValue().getIdVeiculo()).asObject());
         colMarca.setCellValueFactory(dado -> new SimpleStringProperty(dado.getValue().getMarca()));
         colModelo.setCellValueFactory(dado -> new SimpleStringProperty(dado.getValue().getModelo()));
@@ -98,8 +117,7 @@ public class VeiculoController {
         carregarVeiculos();
 
         tabelaVeiculos.getSelectionModel().selectedItemProperty().addListener((observable, antigo, selecionado) -> {
-
-            if(selecionado != null){
+            if (selecionado != null) {
                 txtMarca.setText(selecionado.getMarca());
                 txtModelo.setText(selecionado.getModelo());
                 txtPlaca.setText(selecionado.getPlaca());
@@ -113,22 +131,40 @@ public class VeiculoController {
         });
 
         txtBusca.textProperty().addListener((observable, antigo, novoValor) -> {
-            try {
-                if (novoValor == null || novoValor.trim().isEmpty()) {
-                    carregarVeiculos();
-                } else {
-                    tabelaVeiculos.setItems(FXCollections.observableArrayList(veiculoDAO.buscarPorMarcaOuPlaca(novoValor)));
-                }
-            } catch (SQLException e) {
-                new Alert(Alert.AlertType.ERROR, "Erro ao buscar veículos!!", ButtonType.OK).showAndWait();
-                e.printStackTrace();
-            }
+            carregarVeiculos();
         });
 
+        // Listener que troca a estratégia de ordenação em tempo de execução (Padrão Strategy)
+        cbOrdenacao.valueProperty().addListener((observable, antigo, criterioSelecionado) -> {
+            atualizarEstrategiaOrdenacao(criterioSelecionado);
+            carregarVeiculos();
+        });
+    }
+
+    private void atualizarEstrategiaOrdenacao(String criterio) {
+        if (criterio == null) {
+            veiculoService.setEstrategiaOrdenacao(new OrdenacaoPadraoStrategy());
+            return;
+        }
+
+        switch (criterio) {
+            case "Menor Preço":
+                veiculoService.setEstrategiaOrdenacao(new OrdenacaoMenorPrecoStrategy());
+                break;
+            case "Maior Preço":
+                veiculoService.setEstrategiaOrdenacao(new OrdenacaoMaiorPrecoStrategy());
+                break;
+            case "Ano Mais Recente":
+                veiculoService.setEstrategiaOrdenacao(new OrdenacaoAnoMaisRecenteStrategy());
+                break;
+            default:
+                veiculoService.setEstrategiaOrdenacao(new OrdenacaoPadraoStrategy());
+                break;
+        }
     }
 
     @FXML
-    private void cadastrar(){
+    private void cadastrar() {
         String marca = txtMarca.getText().trim();
         String modelo = txtModelo.getText().trim();
         String placa = txtPlaca.getText().trim().toUpperCase();
@@ -139,62 +175,51 @@ public class VeiculoController {
         String status = cbStatus.getValue();
         String especificacoes = txtEspecificacoes.getText().trim();
 
-        if(marca.isEmpty() || modelo.isEmpty() || placa.isEmpty() || anoTexto.isEmpty() || cor.isEmpty() || tipo.isEmpty() || valorTexto.isEmpty() || status == null){
-            new Alert(Alert.AlertType.WARNING, "Preencha todos os campos obrigatórios!!", ButtonType.OK).showAndWait();
+        if (marca.isEmpty() || modelo.isEmpty() || placa.isEmpty() || anoTexto.isEmpty() ||
+                cor.isEmpty() || tipo.isEmpty() || valorTexto.isEmpty() || status == null) {
+            new Alert(Alert.AlertType.WARNING, "Preencha todos os campos obrigatórios!", ButtonType.OK).showAndWait();
             return;
         }
 
-        if(placa.length() != 7){
-            new Alert(Alert.AlertType.WARNING, "A placa deve possuir 7 caracteres!!", ButtonType.OK).showAndWait();
-            return;
-        }
-
-        try{
+        try {
             double valor = Double.parseDouble(valorTexto.replace(",", "."));
-            int ano = Integer.parseInt((anoTexto));
+            int ano = Integer.parseInt(anoTexto);
 
-            if(valor <= 0){
-                new Alert(Alert.AlertType.WARNING, "O valor deve ser maior que zero!!", ButtonType.OK).showAndWait();
-                return;
-            }
+            // Aplicação do Padrão GoF Builder para construir o objeto Veiculo
+            Veiculo veiculo = VeiculoBuilder.builder()
+                    .comMarca(marca)
+                    .comModelo(modelo)
+                    .comPlaca(placa)
+                    .comAno(ano)
+                    .comCor(cor)
+                    .comTipo(tipo)
+                    .comValor(valor)
+                    .comStatus(status)
+                    .comEspecificacoes(especificacoes)
+                    .build();
 
-            if(ano < 1900){
-                new Alert(Alert.AlertType.WARNING, "Informe um ano válido!", ButtonType.OK).showAndWait();
-                return;
-            }
-
-            Veiculo veiculo = new Veiculo();
-
-            veiculo.setMarca(marca);
-            veiculo.setModelo(modelo);
-            veiculo.setPlaca(placa);
-            veiculo.setAno(ano);
-            veiculo.setCor(cor);
-            veiculo.setTipo(tipo);
-            veiculo.setValor(valor);
-            veiculo.setStatus(status);
-            veiculo.setEspecificacoes(especificacoes);
-
-            veiculoDAO.inserir(veiculo);
+            veiculoService.cadastrar(veiculo);
 
             new Alert(Alert.AlertType.INFORMATION, "Veículo cadastrado com sucesso!!", ButtonType.OK).showAndWait();
 
             limparCampos();
             carregarVeiculos();
 
-        } catch(NumberFormatException e){
+        } catch (NumberFormatException e) {
             new Alert(Alert.AlertType.WARNING, "Informe valores válidos para ano e valor!", ButtonType.OK).showAndWait();
-        } catch (SQLException e){
+        } catch (IllegalArgumentException e) {
+            new Alert(Alert.AlertType.WARNING, e.getMessage(), ButtonType.OK).showAndWait();
+        } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, "Erro ao cadastrar veículo!! Verifique se a placa já está cadastrada!!", ButtonType.OK).showAndWait();
             e.printStackTrace();
         }
     }
 
     @FXML
-    private void alterar(){
-        Veiculo veiculo = tabelaVeiculos.getSelectionModel().getSelectedItem();
+    private void alterar() {
+        Veiculo veiculoSelecionado = tabelaVeiculos.getSelectionModel().getSelectedItem();
 
-        if(veiculo == null){
+        if (veiculoSelecionado == null) {
             new Alert(Alert.AlertType.WARNING, "Selecione um veículo na tabela!", ButtonType.OK).showAndWait();
             return;
         }
@@ -209,41 +234,31 @@ public class VeiculoController {
         String status = cbStatus.getValue();
         String especificacoes = txtEspecificacoes.getText().trim();
 
-        if(marca.isEmpty() || modelo.isEmpty() || placa.isEmpty() || anoTexto.isEmpty() || cor.isEmpty() || tipo.isEmpty() || valorTexto.isEmpty() || status == null){
-            new Alert(Alert.AlertType.WARNING, "Preencha todos os campos obrigatórios!!", ButtonType.OK).showAndWait();
-            return;
-        }
-
-        if(placa.length() != 7){
-            new Alert(Alert.AlertType.WARNING, "A placa deve possuir 7 caracteres!!", ButtonType.OK).showAndWait();
+        if (marca.isEmpty() || modelo.isEmpty() || placa.isEmpty() || anoTexto.isEmpty() ||
+                cor.isEmpty() || tipo.isEmpty() || valorTexto.isEmpty() || status == null) {
+            new Alert(Alert.AlertType.WARNING, "Preencha todos os campos obrigatórios!", ButtonType.OK).showAndWait();
             return;
         }
 
         try {
             double valor = Double.parseDouble(valorTexto.replace(",", "."));
-            int ano = Integer.parseInt((anoTexto));
+            int ano = Integer.parseInt(anoTexto);
 
-            if (valor <= 0) {
-                new Alert(Alert.AlertType.WARNING, "O valor deve ser maior que zero!!", ButtonType.OK).showAndWait();
-                return;
-            }
+            // Aplicação do Padrão GoF Builder para reconstruir o objeto Veiculo na alteração
+            Veiculo veiculo = VeiculoBuilder.builder()
+                    .comIdVeiculo(veiculoSelecionado.getIdVeiculo())
+                    .comMarca(marca)
+                    .comModelo(modelo)
+                    .comPlaca(placa)
+                    .comAno(ano)
+                    .comCor(cor)
+                    .comTipo(tipo)
+                    .comValor(valor)
+                    .comStatus(status)
+                    .comEspecificacoes(especificacoes)
+                    .build();
 
-            if (ano < 1900) {
-                new Alert(Alert.AlertType.WARNING, "Informe um ano válido!", ButtonType.OK).showAndWait();
-                return;
-            }
-
-            veiculo.setMarca(marca);
-            veiculo.setModelo(modelo);
-            veiculo.setPlaca(placa);
-            veiculo.setAno(ano);
-            veiculo.setCor(cor);
-            veiculo.setTipo(tipo);
-            veiculo.setValor(valor);
-            veiculo.setStatus(status);
-            veiculo.setEspecificacoes(especificacoes);
-
-            veiculoDAO.alterar(veiculo);
+            veiculoService.alterar(veiculo);
 
             new Alert(Alert.AlertType.INFORMATION, "Veículo alterado com sucesso!!", ButtonType.OK).showAndWait();
 
@@ -252,34 +267,39 @@ public class VeiculoController {
 
         } catch (NumberFormatException e) {
             new Alert(Alert.AlertType.WARNING, "Informe valores válidos para ano e valor!!", ButtonType.OK).showAndWait();
-        } catch (SQLException e){
+        } catch (IllegalArgumentException e) {
+            new Alert(Alert.AlertType.WARNING, e.getMessage(), ButtonType.OK).showAndWait();
+        } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, "Erro ao alterar veículo!!", ButtonType.OK).showAndWait();
             e.printStackTrace();
         }
     }
 
     @FXML
-    private void excluir(){
+    private void excluir() {
         Veiculo veiculo = tabelaVeiculos.getSelectionModel().getSelectedItem();
 
-        if(veiculo == null){
+        if (veiculo == null) {
             new Alert(Alert.AlertType.WARNING, "Selecione um veículo na tabela!!", ButtonType.OK).showAndWait();
             return;
         }
 
-        Alert confirmacao = new Alert(Alert.AlertType.CONFIRMATION, "Deseja realmente excluir o veículo " + veiculo.getMarca() + " " + veiculo.getModelo() + "?", ButtonType.YES, ButtonType.NO);
+        Alert confirmacao = new Alert(Alert.AlertType.CONFIRMATION,
+                "Deseja realmente excluir o veículo " + veiculo.getMarca() + " " + veiculo.getModelo() + "?",
+                ButtonType.YES, ButtonType.NO);
         confirmacao.showAndWait();
 
-        if(confirmacao.getResult() == ButtonType.YES){
-
-            try{
-                veiculoDAO.excluir(veiculo.getIdVeiculo());
+        if (confirmacao.getResult() == ButtonType.YES) {
+            try {
+                veiculoService.excluir(veiculo.getIdVeiculo());
 
                 new Alert(Alert.AlertType.INFORMATION, "Veículo excluído com sucesso!!", ButtonType.OK).showAndWait();
 
                 limparCampos();
                 carregarVeiculos();
-            } catch (SQLException e){
+            } catch (IllegalArgumentException e) {
+                new Alert(Alert.AlertType.WARNING, e.getMessage(), ButtonType.OK).showAndWait();
+            } catch (SQLException e) {
                 new Alert(Alert.AlertType.ERROR, "Erro ao excluir veículo!! Verifique se ele possui uma venda cadastrada.", ButtonType.OK).showAndWait();
                 e.printStackTrace();
             }
@@ -287,11 +307,11 @@ public class VeiculoController {
     }
 
     @FXML
-    private void limpar(){
+    private void limpar() {
         limparCampos();
     }
 
-    private void limparCampos(){
+    private void limparCampos() {
         txtMarca.clear();
         txtModelo.clear();
         txtPlaca.clear();
@@ -307,20 +327,23 @@ public class VeiculoController {
         txtMarca.requestFocus();
     }
 
-    private void carregarVeiculos(){
+    private void carregarVeiculos() {
         try {
-            tabelaVeiculos.setItems(FXCollections.observableArrayList(veiculoDAO.consultar()));
-        } catch (SQLException e){
+            String termoBusca = txtBusca != null ? txtBusca.getText() : null;
+            tabelaVeiculos.setItems(FXCollections.observableArrayList(
+                    veiculoService.buscarPorMarcaOuPlaca(termoBusca)
+            ));
+        } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, "Erro ao consultar veículos!!", ButtonType.OK).showAndWait();
             e.printStackTrace();
         }
     }
 
     @FXML
-    private void voltar(){
+    private void voltar() {
         try {
             GerenciadorTelas.trocarTela("/view/menu.fxml");
-        } catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }

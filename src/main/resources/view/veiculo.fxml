@@ -56,9 +56,12 @@
         <Button layoutX="650" layoutY="270" prefWidth="130" text="Limpar" onAction="#limpar" />
         <Button layoutX="810" layoutY="270" prefWidth="130" text="Voltar" onAction="#voltar" />
 
-        <!-- BARRA DE PESQUISA (DIFERENCIAL 1) -->
+        <!-- BARRA DE PESQUISA (DIFERENCIAL 1) E ORDENAÇÃO (PADRÃO STRATEGY) -->
         <Label layoutX="25" layoutY="310" text="Buscar (Marca/Placa):" style="-fx-font-weight: bold;" />
         <TextField fx:id="txtBusca" layoutX="160" layoutY="305" prefWidth="300" promptText="Digite para filtrar..." />
+
+        <Label layoutX="520" layoutY="310" text="Ordenar por:" style="-fx-font-weight: bold;" />
+        <ComboBox fx:id="cbOrdenacao" layoutX="615" layoutY="305" prefWidth="220" />
 
         <!-- TABELA -->
         <TableView fx:id="tabelaVeiculos" layoutX="25" layoutY="345" prefWidth="1050" prefHeight="325">
